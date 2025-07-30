@@ -1,37 +1,34 @@
-import React, { useEffect, useState } from "react";
+import { Link, Outlet } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import "../styles/shop.css";
-
-import { useAuthStore } from "../store/auth-store";
-
-import { supabase } from "../services/supabaseClient";
-import { toast } from "sonner";
+import { useShopStore } from "../store/shop-store";
+import { useEffect } from "react";
 
 export default function Shop() {
-  const { user } = useAuthStore();
-  const [shops, setShops] = useState([]);
+  const { id } = useParams();
+  const { shop } = useShopStore();
   useEffect(() => {
-    const fetchShops = async () => {
-      const { data, error } = await supabase
-        .from("shops")
-        .select("*")
-        .eq("owner_id", user.id);
-      if (error) {
-        toast.error("Failed to fetch shops");
-      }
-
-      setShops(data);
-    };
-    fetchShops();
-  }, [user.id]);
-
-  <div className="shop-wrapper">
-    {shops.length === 0 ? (
-      <>
-        <h4>You don't have any shops.</h4>
-        <button>Kindly create one.</button>
-      </>
-    ) : (
-      JSON.stringify(shops)
-    )}
-  </div>;
+    console.log(shop);
+  }, []);
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          gap: "20px",
+          padding: "20px",
+        }}
+      >
+        <Link to={`/shops/${id}`}>Overview</Link>
+        <Link to={`/shops/${id}/products`}>Products</Link>
+        <Link to={`/shops/${id}/sales`}>Sales</Link>
+        <Link to={`shops/${id}/expenses`}>Expenses</Link>
+        <Link to="/shops/:id/settings">Settings</Link>
+        <Link to="/shops/:id/profiles">Profile</Link>
+      </div>
+      <Outlet />
+    </div>
+  );
 }

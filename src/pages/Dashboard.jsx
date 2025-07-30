@@ -3,10 +3,12 @@ import { supabase } from "../services/supabaseClient";
 import { Line } from "react-chartjs-2";
 import { Chart, registerables } from "chart.js";
 import "../styles/Dashboard.css";
+import { useShopStore } from "../store/shop-store";
 
 Chart.register(...registerables);
 
 export default function Dashboard() {
+  const { shop } = useShopStore();
   const [chartLabels, setChartLabels] = useState([]);
   const [chartValues, setChartValues] = useState([]);
   const [filter, setFilter] = useState("daily");
@@ -104,7 +106,7 @@ export default function Dashboard() {
           />
         )}
         <div>
-          <h2>{shopName || "Shop"}</h2>
+          <h2>{shop?.name || "Shop"}</h2>
           <p style={{ margin: 0, color: "#555" }}>Welcome to your dashboard!</p>
         </div>
       </div>
