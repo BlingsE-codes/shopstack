@@ -34,17 +34,23 @@ export default function Login() {
       return;
     }
 
-    await signin(user);
+    // await signin(user);
 
-    // const { data: profileData, error: profileFetchError } = await supabase
-    //   .from("profiles")
-    //   .single();
+    const { data: profileData, error: profileFetchError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq('auth_id', user.id);
+      
 
-    // if (profileFetchError || !profileData) {
-    //   toast.error("Failed to load profile");
-    //   setLoading(false);
-    //   return;
-    // }
+    
+
+    if (profileFetchError || !profileData) {
+      toast.error("Failed to load profile");
+      setLoading(false);
+      return;
+    }
+
+    signin(profileData[0]);
 
     console.log("User from supabase", user)
     console.log("User setup from zustand", authUser);
