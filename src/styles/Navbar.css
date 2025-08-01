@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
+  background: #4f56af;
   padding: 12px 20px;
   border-bottom: 1px solid #ddd;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
@@ -31,10 +31,12 @@
 .nav-buttons {
   display: flex;
   justify-content: space-evenly;
+
   
 }
 
-.nav-buttons .btn-auth {
+
+.btn-auth {
   background-color: #007bff;
   color: white;
   padding: 6px 12px;
@@ -42,7 +44,32 @@
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s ease;
+  margin: 6px;
 }
+
+.nav-buttons .btn-auth:hover {
+  background-color: #0056b3;
+}
+/* .nav-buttons  {
+  background-color: #e9f0ea;
+  color: white;
+  margin: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
+  margin-left: 4px;
+  transition: background 0.2s ease;
+} */
+
+.btn-shopprofile{
+  background-color: #25e950;
+}
+.btn-shopprofile:hover {
+  background-color: #25e950;
+}
+
 
 .nav-buttons .btn-auth:hover {
   background-color: #0056b3;
@@ -66,7 +93,7 @@ a{
 .nav-links a {
   text-decoration: none;
   font-weight: 500;
-  /* color: #333; */
+  color: #333; 
   padding: 8px 12px;
   border-radius: 6px;
   transition: all 0.2s ease;
@@ -81,4 +108,34 @@ a{
   background-color: #0077cc;
   color: #fff;
 }
+
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.shop-logo {
+  height: 40px;
+  width: 40px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.shop-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2f3640;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #f2f4f7;
+  text-decoration: none;
+}
+
 

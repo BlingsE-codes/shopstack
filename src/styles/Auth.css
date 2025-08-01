@@ -1,60 +1,96 @@
+/* Base styling */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Container */
 .auth-container {
   display: flex;
   justify-content: center;
   align-items: center;
-
-  background: #f2f2f2;
+  height: 100vh;
+  background: linear-gradient(to right, #e6ecf4, #f7f9fb);
+  padding: 20px;
 }
 
+/* Form */
 .auth-form {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  width: 90%;
-  max-width: 400px;
+  background: #ffffff;
+  padding: 40px 30px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  width: 100%;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
+  transition: all 0.3s ease-in-out;
 }
 
+/* Heading */
+.auth-form h1 {
+  font-size: 26px;
+  font-weight: 600;
+  color: #2f3640;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* Inputs and Selects */
 .auth-form input,
 .auth-form select {
-  padding: 12px;
-  font-size: 16px;
+  padding: 14px 12px;
+  font-size: 15px;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: 8px;
+  transition: border-color 0.2s ease;
 }
 
+.auth-form input:focus,
+.auth-form select:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+/* Button */
 .auth-form button {
-  padding: 12px;
+  padding: 14px;
   background-color: #4a90e2;
   color: white;
   border: none;
-  font-weight: bold;
-  border-radius: 6px;
+  font-weight: 600;
+  border-radius: 8px;
   cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
 .auth-form button:hover {
   background-color: #357bd8;
 }
 
-.auth-toggle {
+/* Toggle links */
+.auth-toggle,
+.auth-form .toggle {
   text-align: center;
   font-size: 14px;
-}
-
-.auth-toggle span {
   color: #4a90e2;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 500;
+  text-decoration: underline;
+  transition: color 0.2s ease;
 }
 
-.welcome-page{
+.auth-form .toggle:hover {
+  color: #2f3640;
+}
+
+/* Welcome message */
+.welcome-page {
   color: #357bd8;
-  font-size: 30px;
+  font-size: 28px;
+  font-weight: 600;
+  text-align: center;
 }
-
-
-

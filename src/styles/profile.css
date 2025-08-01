@@ -1,0 +1,107 @@
+/* settings.css */
+/* Profile.css */
+
+.profile-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.profile-header h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.profile-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ddd;
+}
+
+.profile-field {
+  margin-bottom: 1.5rem;
+}
+
+.profile-field label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #444;
+}
+
+.profile-field input,
+.profile-field select {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.profile-field input:focus,
+.profile-field select:focus {
+  border-color: #007bff;
+}
+
+.profile-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.profile-buttons button {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn-update {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-update:hover {
+  background-color: #0056b3;
+}
+
+.btn-delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-delete:hover {
+  background-color: #b52b3a;
+}
+
+.logo-upload {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.logo-upload input[type="file"] {
+  flex: 1;
+}

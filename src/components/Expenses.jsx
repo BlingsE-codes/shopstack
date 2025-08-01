@@ -1,198 +1,183 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../services/supabaseClient";
 import { toast } from "sonner";
+import "../styles/expenses.css";
 
 export default function Expenses() {
   const [expenses, setExpenses] = useState([]);
-  const [name, setName] = useState("");
-  const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
-  const [totalToday, setTotalToday] = useState(0);
+  const [newExpense, setNewExpense] = useState({ title: "", amount: "" });
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
+  const [total, setTotal] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [shopId, setShopId] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const shopId = localStorage.getItem("shop_id");
 
   useEffect(() => {
-    const savedShopId = localStorage.getItem("shop_id");
-    if (!savedShopId) {
-      toast.error("Shop ID not found. Please log in again.");
+    if (!shopId) {
+      toast.error("Shop ID not found");
       return;
     }
-    setShopId(savedShopId);
-    fetchUser();
-  }, []);
 
-  useEffect(() => {
-    if (shopId) fetchExpensesToday();
+    const init = async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) {
+        toast.error("User not found");
+        return;
+      }
+
+      setUser(user);
+      await fetchAdminStatus(user);
+      await fetchExpensesToday();
+    };
+
+    init();
   }, [shopId]);
 
- const fetchUser = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  setUser(user);
+  const fetchAdminStatus = async (user) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .eq("auth_id", shopId)
+      .maybeSingle();
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("user_id", user.id)
-    .maybeSingle(); // make sure only 1 profile is expected per user
-
-  if (error) {
-    console.error("Error fetching admin status:", error.message);
-    toast.error("Could not fetch admin status");
-  } else {
-    setIsAdmin(data?.is_admin);
-    // localStorage.setItem("shop_id", data.shop_id); // Optional: persist shop_id
-  }
-};
-
-
-  const getTodayBounds = () => {
-    const now = new Date();
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(now);
-    end.setHours(23, 59, 59, 999);
-    return {
-      start: start.toISOString(),
-      end: end.toISOString(),
-    };
+    if (error) {
+      console.error("Admin fetch error:", error.message);
+      return;
+    }
+    setIsAdmin(data?.is_admin || false);
   };
 
   const fetchExpensesToday = async () => {
-    const { start, end } = getTodayBounds();
+    setLoading(true);
+    const today = new Date().toISOString().split("T")[0];
     const { data, error } = await supabase
       .from("expenses")
       .select("*")
       .eq("shop_id", shopId)
-      .gte("created_at", start)
-      .lte("created_at", end)
+      .gte("created_at", `${today}T00:00:00`)
+      .lte("created_at", `${today}T23:59:59`)
       .order("created_at", { ascending: false });
 
     if (error) {
-      toast.error("Failed to load today's expenses");
+      toast.error("Error fetching expenses");
     } else {
       setExpenses(data);
-      const total = data.reduce(
-        (sum, e) => sum + parseFloat(e.amount || 0),
-        0
-      );
-      setTotalToday(total);
+      calculateTotal(data);
     }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!name || !amount) {
-      toast.error("Name and amount required");
-      return;
-    }
-
-    if (!shopId) {
-      toast.error("Missing shop ID");
-      return;
-    }
-
-    setLoading(true);
-    const { error } = await supabase.from("expenses").insert([
-      {
-        name,
-        amount: parseFloat(amount),
-        note,
-        created_at: new Date().toISOString(),
-        shop_id: shopId,
-      },
-    ]);
-
-    if (error) {
-      console.error("Error saving expense:", error.message);
-      toast.error("Error saving expense");
-    } else {
-      toast.success("Expense recorded");
-      setName("");
-      setAmount("");
-      setNote("");
-      fetchExpensesToday();
-    }
-
     setLoading(false);
   };
 
+  const calculateTotal = (data) => {
+    const totalAmount = data.reduce(
+      (acc, e) => acc + parseFloat(e.amount || 0),
+      0
+    );
+    setTotal(totalAmount.toFixed(2));
+  };
+
+  const handleInputChange = (e) => {
+    setNewExpense({ ...newExpense, [e.target.name]: e.target.value });
+  };
+
+  const handleAddExpense = async (e) => {
+    e.preventDefault();
+
+    const { title, amount } = newExpense;
+    if (!title || !amount) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    const insertData = {
+      title,
+      amount: Number(amount),
+      shop_id: shopId,
+      user_id: user.id,
+      is_admin: isAdmin,
+    };
+
+    const { error } = await supabase.from("expenses").insert([insertData]);
+
+    console.log("Expense payload:", insertData);
+
+    if (error) {
+      toast.error("Failed to add expense");
+    } else {
+      toast.success("Expense added!");
+      setNewExpense({ title: "", amount: "" });
+      fetchExpensesToday();
+    }
+  };
+
   const handleDeleteExpense = async (id) => {
-    if (!window.confirm("Delete this expense?")) return;
     const { error } = await supabase.from("expenses").delete().eq("id", id);
     if (error) {
       toast.error("Failed to delete expense");
     } else {
       toast.success("Expense deleted");
       fetchExpensesToday();
-      fetchFilteredExpenses();
     }
   };
 
-  const fetchFilteredExpenses = async () => {
+  const handleFilter = async () => {
     if (!fromDate || !toDate) {
-      toast.error("Select both dates");
+      toast.error("Please select both start and end dates");
+      return;
+    }
+
+    if (new Date(fromDate) > new Date(toDate)) {
+      toast.error("Start date must be before end date");
       return;
     }
 
     setLoading(true);
     const { data, error } = await supabase
       .from("expenses")
-      .select("is_admin, name, amount, note, created_at")
+      .select("*")
       .eq("shop_id", shopId)
       .gte("created_at", `${fromDate}T00:00:00`)
-      .lte("created_at", `${toDate}T23:59:59`);
+      .lte("created_at", `${toDate}T23:59:59`)
+      .order("created_at", { ascending: false });
 
     if (error) {
-      toast.error("Error fetching filtered expenses");
+      toast.error("Error filtering expenses");
     } else {
       setExpenses(data);
-      const total = data.reduce(
-        (sum, e) => sum + parseFloat(e.amount || 0),
-        0
-      );
-      setTotalToday(total);
-      toast.success("Expenses filtered");
+      calculateTotal(data);
     }
-
     setLoading(false);
   };
 
   return (
-    <div className="expenses-page">
-      <h2>Record Expense</h2>
-      <form onSubmit={handleSubmit} className="expenses-form">
+    <div className="expenses">
+      <h2 className="expenses-title">Shop Expenses</h2>
+
+      <form onSubmit={handleAddExpense} className="expense-form">
         <input
           type="text"
-          placeholder="Expense name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          name="title"
+          placeholder="Expense title"
+          value={newExpense.title}
+          onChange={handleInputChange}
         />
         <input
           type="number"
-          placeholder="Amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          name="amount"
+          placeholder="Amount (₦)"
+          value={newExpense.amount}
+          onChange={handleInputChange}
         />
-        <input
-          type="text"
-          placeholder="Reason (optional)"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
-        <button type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Submit Expense"}
-        </button>
+        <button type="submit">Add</button>
       </form>
 
-      <div className="expenses-summary">
-        <strong>Today’s Expenses:</strong> ₦{totalToday.toLocaleString()}
-      </div>
-
-      <div className="filter-controls">
+      <div className="filter-section">
         <input
           type="date"
           value={fromDate}
@@ -203,38 +188,43 @@ export default function Expenses() {
           value={toDate}
           onChange={(e) => setToDate(e.target.value)}
         />
-        <button onClick={fetchFilteredExpenses}>Filter</button>
+        <button onClick={handleFilter}>Filter</button>
       </div>
 
-      <h3>Expense History</h3>
-      <table className="expenses-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Amount (₦)</th>
-            <th>Note</th>
-            <th>Time</th>
-            {isAdmin && <th>Action</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {expenses.map((expense) => (
-            <tr key={expense.id}>
-              <td>{expense.name}</td>
-              <td>{expense.amount}</td>
-              <td>{expense.note || "-"}</td>
-              <td>{new Date(expense.created_at).toLocaleTimeString()}</td>
-              {isAdmin && (
-                <td>
-                  <button onClick={() => handleDeleteExpense(expense.id)}>
-                    Delete
-                  </button>
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <h3 className="total-expense">Total: ₦{total}</h3>
+
+      {loading ? (
+        <p className="loading">Loading...</p>
+      ) : (
+        <div className="table-wrapper">
+          <table className="expenses-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Amount (₦)</th>
+                <th>Date</th>
+                {isAdmin && <th>Action</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.map((e) => (
+                <tr key={e.id}>
+                  <td>{e.title}</td>
+                  <td>{parseFloat(e.amount).toFixed(2)}</td>
+                  <td>{new Date(e.created_at).toLocaleDateString()}</td>
+                  {isAdmin && (
+                    <td>
+                      <button onClick={() => handleDeleteExpense(e.id)}>
+                        Delete
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

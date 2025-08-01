@@ -1,207 +1,234 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabaseClient";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { useAuthStore } from "../store/auth-store";
+import { toast } from "sonner";
 import "../styles/Settings.css";
 
 export default function Settings() {
+  const { user } = useAuthStore();
+  const [profile, setProfile] = useState(null);
   const [shopName, setShopName] = useState("");
-  const [email, setEmail] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [preview, setPreview] = useState("");
-  const [logoFile, setLogoFile] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState("");
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [shopAddress, setShopAddress] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
-  const shop_id = localStorage.getItem("shop_id");
+  const [logoFile, setLogoFile] = useState(null);
+  const [previewURL, setPreviewURL] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        toast.error("Failed to fetch user");
-        return;
-      }
-
-      if (!shop_id) {
-        toast.error("Missing shop ID. Please log in again.");
-        return;
-      }
-
       const { data, error } = await supabase
         .from("profiles")
-        .select("shop_name, logo_url, email, updated_at")
-        .eq("user_id", user.id)
-        .eq("shop_id", shop_id)
-        .maybeSingle();
+        .select("*")
+        .eq("id", user.id)
+        .single();
 
-      if (error || !data) {
-        toast.error("Profile not found");
+      if (error) {
+        toast.error("Failed to load profile");
         return;
       }
 
-      setEmail(data.email);
+      setProfile(data);
       setShopName(data.shop_name || "");
-      setLogoUrl(data.logo_url || "");
-      if (data.updated_at) {
-        setLastUpdated(new Date(data.updated_at).toLocaleString());
-      }
+      setShopAddress(data.shop_address || "");
+    };
+
+    const fetchUsers = async () => {
+      const { data, error } = await supabase.from("profiles").select("*");
+      if (!error) setUsers(data);
     };
 
     fetchProfile();
-  }, [shop_id]);
+    fetchUsers();
+  }, [user]);
 
-  const handleLogoUpload = (e) => {
+  /** ----------------- Update Shop Info ----------------- */
+  const handleUpdateShop = async () => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ shop_name: shopName, shop_address: shopAddress })
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast.error("Failed to update shop info");
+    } else {
+      toast.success("Shop info updated!");
+    }
+  };
+
+  /** ----------------- Change Password ----------------- */
+  const handleChangePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Password updated successfully!");
+      setNewPassword("");
+    }
+  };
+
+  /** ----------------- Change Logo ----------------- */
+  const handleLogoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setLogoFile(file);
-      setPreview(URL.createObjectURL(file));
+      setPreviewURL(URL.createObjectURL(file));
     }
   };
 
-  const handleUpdate = async () => {
-    if (!shopName.trim()) {
-      toast.warning("Shop name cannot be empty");
+  const handleLogoUpload = async () => {
+    if (!logoFile) {
+      toast.error("Please select a logo first.");
       return;
     }
 
-    setLoading(true);
+    setUploading(true);
+
+    const fileExt = logoFile.name.split(".").pop();
+    const fileName = `${user.id}.${fileExt}`;
+    const filePath = `shop-logos/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("shop-logos")
+      .upload(filePath, logoFile, { upsert: true });
+
+    if (uploadError) {
+      toast.error("Upload failed: " + uploadError.message);
+      setUploading(false);
+      return;
+    }
+
     const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      toast.error("User not found");
-      setLoading(false);
-      return;
-    }
-
-    let finalLogoUrl = logoUrl;
-
-    if (logoFile) {
-      const fileExt = logoFile.name.split(".").pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("logos")
-        .upload(filePath, logoFile, {
-          cacheControl: "3600",
-          upsert: true,
-        });
-
-      if (uploadError) {
-        toast.error("Failed to upload logo");
-        setLoading(false);
-        return;
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from("logos")
-        .getPublicUrl(filePath);
-
-      finalLogoUrl = publicUrlData?.publicUrl || "";
-    }
+      data: { publicUrl },
+    } = supabase.storage.from("shop-logos").getPublicUrl(filePath);
 
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({
-        shop_name: shopName,
-        logo_url: finalLogoUrl,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", user.id)
-      .eq("shop_id", shop_id);
+      .update({ logo_url: publicUrl })
+      .eq("id", user.id);
 
     if (updateError) {
-      toast.error("Failed to update profile");
+      toast.error("Failed to save logo URL");
     } else {
-      toast.success("Profile updated successfully");
-      setLogoUrl(finalLogoUrl);
-      setPreview("");
+      toast.success("Logo updated!");
+      setProfile((prev) => ({ ...prev, logo_url: publicUrl }));
       setLogoFile(null);
-      setLastUpdated(new Date().toLocaleString());
+      setPreviewURL(null);
     }
 
-    setLoading(false);
+    setUploading(false);
   };
 
-  const handleDelete = async () => {
-    const confirmDelete = confirm(
-      "Are you sure you want to delete your shop? This action cannot be undone."
-    );
-    if (!confirmDelete) return;
+  /** ----------------- Manage Users ----------------- */
+  const handleToggleAdmin = async (userId, isAdmin) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_admin: !isAdmin })
+      .eq("id", userId);
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user || !shop_id) {
-      toast.error("Missing shop or user info");
-      return;
+    if (error) {
+      toast.error("Failed to update user role");
+    } else {
+      toast.success("User role updated!");
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.user_id === userId ? { ...u, is_admin: !isAdmin } : u
+        )
+      );
     }
+  };
 
-    await supabase.from("sales").delete().eq("shop_id", shop_id);
-    await supabase.from("products").delete().eq("shop_id", shop_id);
-    await supabase.from("profiles").delete().eq("user_id", user.id);
-    await supabase.from("shops").delete().eq("id", shop_id);
-
-    await supabase.auth.signOut();
-    localStorage.clear();
-    toast.success("Shop deleted. Redirecting...");
-    navigate("/signup");
+  const handleRemoveUser = async (userId) => {
+    const { error } = await supabase.from("profiles").delete().eq("user_id", userId);
+    if (error) {
+      toast.error("Failed to remove user");
+    } else {
+      toast.success("User removed!");
+      setUsers((prev) => prev.filter((u) => u.user_id !== userId));
+    }
   };
 
   return (
     <div className="settings-container">
-      <h2>⚙️ Shop Settings</h2>
+      <h2>Settings</h2>
 
-      <div className="input-group">
-        <label>Email (read only)</label>
-        <input value={email} disabled />
-      </div>
-
-      <div className="input-group">
-        <label>Shop Name</label>
+      {/* Shop Info */}
+      <div className="settings-section">
+        <h3>Shop Info</h3>
         <input
+          type="text"
+          placeholder="Shop Name"
           value={shopName}
           onChange={(e) => setShopName(e.target.value)}
         />
+        <input
+          type="text"
+          placeholder="Shop Address"
+          value={shopAddress}
+          onChange={(e) => setShopAddress(e.target.value)}
+        />
+        <button onClick={handleUpdateShop}>Update Shop Info</button>
       </div>
 
-      <div className="input-group">
-        <label>Upload Shop Logo</label>
-        <input type="file" accept="image/*" onChange={handleLogoUpload} />
-        {(preview || logoUrl) && (
-          <img
-            src={preview || logoUrl}
-            alt="Logo Preview"
-            className="logo-preview"
-          />
+      {/* Change Logo */}
+      <div className="settings-section">
+        <h3>Shop Logo</h3>
+        {profile?.logo_url && (
+          <div className="logo-preview">
+            <img src={profile.logo_url} alt="Current Logo" />
+          </div>
         )}
+        {previewURL && (
+          <div className="logo-preview">
+            <img src={previewURL} alt="New Logo Preview" />
+          </div>
+        )}
+        <input type="file" accept="image/*" onChange={handleLogoChange} />
+        <button onClick={handleLogoUpload} disabled={uploading}>
+          {uploading ? "Uploading..." : "Upload Logo"}
+        </button>
       </div>
 
-      {lastUpdated && (
-        <p className="last-updated">Last updated: {lastUpdated}</p>
-      )}
+      {/* Change Password */}
+      <div className="settings-section">
+        <h3>Change Password</h3>
+        <input
+          type="password"
+          placeholder="New Password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+        />
+        <button onClick={handleChangePassword}>Update Password</button>
+      </div>
 
-      <button onClick={handleUpdate} className="btn" disabled={loading}>
-        {loading ? "Updating..." : "✅ Update Profile"}
-      </button>
-
-      <hr />
-
-      <button className="btn delete" onClick={handleDelete}>
-        🗑️ Delete Shop
-      </button>
+      {/* Manage Users */}
+      <div className="settings-section">
+        <h3>Manage Users</h3>
+        <ul className="user-list">
+          {users.map((u) => (
+            <li key={u.user_id}>
+              {u.email} - {u.is_admin ? "Admin" : "User"}
+              <div>
+                <button
+                  onClick={() => handleToggleAdmin(u.user_id, u.is_admin)}
+                >
+                  {u.is_admin ? "Revoke Admin" : "Make Admin"}
+                </button>
+                <button onClick={() => handleRemoveUser(u.user_id)}>
+                  Remove
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

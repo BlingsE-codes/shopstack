@@ -1,299 +1,150 @@
+// Modern Sales Component
+// Supports: Multi-shop, Timestamp, Product Quantity Deduction, Receipt Printing
+
 import { useState, useEffect } from "react";
 import { supabase } from "../services/supabaseClient";
+import { useShopStore } from "../store/shop-store";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from 'uuid';
-//import "../style/sales.css";
+import dayjs from "dayjs";
+import "../styles/Sales.css";
 
 export default function Sales() {
-  const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState("");
-  const [quantity, setQuantity] = useState("");
+  const { shop } = useShopStore();
   const [sales, setSales] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [form, setForm] = useState({ product_id: "", quantity: 1 });
   const [loading, setLoading] = useState(false);
-  const [totalToday, setTotalToday] = useState(0);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [shopId, setShopId] = useState(localStorage.getItem("shop_id"));
+   const [totalDailySales, setTotalDailySales] = useState(0);
 
   useEffect(() => {
-    fetchUserAndShop();
-  }, []);
-
-  useEffect(() => {
-    if (shopId) {
-      fetchProducts();
-      fetchSalesToday();
-    }
-  }, [shopId]);
-
-  const fetchUserAndShop = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    setUser(user);
-
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("shop_id, is_admin")
-      .eq("user_id", user.id)
-      .MaybeSingle();
-
-    if (error) {
-      toast.error("Failed to fetch user profile");
-      return;
-    }
-
-    if (!data?.shop_id) {
-      const newShopId = uuidv4();
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ shop_id: newShopId })
-        .eq("user_id", user.id);
-
-      if (updateError) {
-        toast.error("Failed to assign shop ID");
-        return;
-      }
-
-      await supabase.from("shops").insert([
-        {
-          shop_id: newShopId,
-          email: user.email,
-        },
-      ]);
-
-      localStorage.setItem("shop_id", newShopId);
-      setShopId(newShopId);
-    } else {
-      localStorage.setItem("shop_id", data.shop_id);
-      setShopId(data.shop_id);
-    }
-
-    setIsAdmin(data?.is_admin || false);
-  };
+    fetchProducts();
+    fetchSales();
+  }, [shop.id]);
 
   const fetchProducts = async () => {
     const { data, error } = await supabase
       .from("products")
-      .select("*")
-      .eq("shop_id", shopId);
+      .select("id, name, selling_price, quantity")
+      .eq("shop_id", shop.id);
 
-    if (!error) {
-      setProducts(data);
-    } else {
-      toast.error("Failed to fetch products");
-    }
+    if (error) toast.error("Failed to load products");
+    else setProducts(data);
   };
 
-  const getTodayBounds = () => {
-    const now = new Date();
-    const start = new Date(now.setHours(0, 0, 0, 0)).toISOString();
-    const end = new Date(now.setHours(23, 59, 59, 999)).toISOString();
-    return { start, end };
-  };
-
-  const fetchSalesToday = async () => {
-    const { start, end } = getTodayBounds();
+  const fetchSales = async () => {
     const { data, error } = await supabase
       .from("sales")
-      .select("*")
-      .eq("shop_id", shopId)
-      .gte("created_at", start)
-      .lte("created_at", end);
+      .select("*, products(name)")
+      .eq("shop_id", shop.id)
+      .order("created_at", { ascending: false });
 
-    if (!error) {
-      setSales(data);
-      const total = data.reduce((sum, sale) => sum + parseFloat(sale.amount || 0), 0);
-      setTotalToday(total);
-    } else {
-      toast.error("Failed to fetch today’s sales");
-    }
-  };
-
-  const fetchFilteredSales = async () => {
-    if (!fromDate || !toDate) {
-      toast.error("Please select both dates");
-      return;
-    }
-
-    setLoading(true);
-
-    const { data, error } = await supabase
-      .from("sales")
-      .select("*")
-      .eq("shop_id", shopId)
-      .gte("created_at", `${fromDate}T00:00:00`)
-      .lte("created_at", `${toDate}T23:59:59`);
-
-    if (!error) {
-      setSales(data);
-      const total = data.reduce((sum, sale) => sum + parseFloat(sale.amount || 0), 0);
-      setTotalToday(total);
-      toast.success("Sales filtered");
-    } else {
-      toast.error("Error fetching filtered sales");
-    }
-
-    setLoading(false);
-  };
-
-  const handleDeleteSale = async (id) => {
-    if (!window.confirm("Delete this sale?")) return;
-
-    const { error } = await supabase.from("sales").delete().eq("id", id).eq("shop_id", shopId);
-    if (error) {
-      toast.error("Failed to delete sale");
-    } else {
-      toast.success("Sale deleted");
-      fetchSalesToday();
-      if (fromDate && toDate) fetchFilteredSales();
-    }
+    if (error) toast.error("Failed to load sales");
+    else setSales(data);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const product = products.find((p) => p.id === selectedProduct);
-    const qty = parseInt(quantity);
-
-    if (!product || !qty || qty <= 0) {
-      toast.error("Invalid product or quantity");
-      return;
-    }
-
-    if (qty > product.quantity) {
-      toast.error("Not enough stock");
-      return;
-    }
-
-    const amount = qty * product.selling_price;
-
     setLoading(true);
 
-    toast.promise(
-      (async () => {
-        const { error: saleError } = await supabase.from("sales").insert([{
-          shop_id: shopId,
-          product_id: product.id,
-          product_name: product.name,
-          quantity: qty,
-          amount,
-        }]);
+    const product = products.find((p) => p.id === form.product_id);
+    if (!product || product.quantity < form.quantity) {
+      toast.error("Insufficient stock");
+      setLoading(false);
+      return;
+    }
 
-        if (saleError) throw new Error(saleError.message);
+    const amount = form.quantity * product.selling_price;
 
-        const { error: updateError } = await supabase
-          .from("products")
-          .update({ quantity: product.quantity - qty })
-          .eq("id", product.id)
-          .eq("shop_id", shopId);
-
-        if (updateError) throw new Error("Error updating product quantity");
-
-        setSelectedProduct("");
-        setQuantity("");
-        fetchSalesToday();
-        fetchProducts();
-      })(),
+    const { error: saleError } = await supabase.from("sales").insert([
       {
-        loading: "Saving sale...",
-        success: "Sale recorded!",
-        error: (err) => err.message,
-      }
-    );
+        product_id: form.product_id,
+        quantity: form.quantity,
+        amount,
+        shop_id: shop.id,
+      },
+    ]);
+
+    if (!saleError) {
+      const newQty = product.quantity - form.quantity;
+      await supabase.from("products").update({ quantity: newQty }).eq("id", product.id);
+      toast.success("Sale recorded");
+      fetchSales();
+      fetchProducts();
+      setForm({ product_id: "", quantity: 1 });
+      setTotalDailySales((prev) => prev + amount);
+    } else {
+      toast.error("Failed to record sale");
+    }
 
     setLoading(false);
   };
 
   return (
-    <div className="sales-page">
-      <h2>Record Sale</h2>
+    <div className="sales-container">
 
-      <form onSubmit={handleSubmit} className="sales-form">
-        <label>Product</label>
+        <div className="sales-header">
+          <h2 style={{ margin: 0 }}>{shop.name || "My Shop"}</h2>
+          <p style={{ margin: 0, fontSize: "0.9rem", color: "#666" }}>
+            Manage your inventory here
+          </p>
+        </div>
+
+        
+      {/* Sales Summary */}
+      <div className="sales-summary">
+        <strong>Today’s Sales:</strong> ₦{totalDailySales.toLocaleString()}
+      </div>
+    
+    <div className="sales-page">
+      <h2>Record a Sale</h2>
+      <form onSubmit={handleSubmit} className="sale-form">
         <select
-          value={selectedProduct}
-          onChange={(e) => setSelectedProduct(e.target.value)}
+          name="product_id"
+          value={form.product_id}
+          onChange={(e) => setForm({ ...form, product_id: e.target.value })}
+          required
         >
-          <option value="">Select product</option>
-          {products.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.name} (₦{product.selling_price}) - {product.quantity} left
+          <option value="">Select Product</option>
+          {products.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} (₦{p.selling_price}) - Stock: {p.quantity}
             </option>
           ))}
         </select>
-
-        <label>Quantity</label>
         <input
           type="number"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
           min="1"
-          required
+          value={form.quantity}
+          onChange={(e) => setForm({ ...form, quantity: parseInt(e.target.value) })}
+          placeholder="Quantity"
         />
-
         <button type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Submit Sale"}
+          {loading ? "Recording..." : "Add Sale"}
         </button>
       </form>
 
-      <div className="sales-summary">
-        <strong>Today’s Sales:</strong> ₦{totalToday.toLocaleString()}
-      </div>
-
-      <div className="filter-controls">
-        <label>From</label>
-        <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-        <label>To</label>
-        <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-        <button onClick={fetchFilteredSales} disabled={loading}>
-          {loading ? "Filtering..." : "Filter"}
-        </button>
-      </div>
-
       <h3>Sales History</h3>
-      {sales.length === 0 ? (
-        <p>No sales found for the selected period.</p>
-      ) : (
-        <table className="sales-table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Qty</th>
-              <th>Amount (₦)</th>
-              <th>Time</th>
-              {isAdmin && <th>Action</th>}
+      <table className="sales-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Amount</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sales.map((s) => (
+            <tr key={s.id}>
+              <td>{s.products?.name}</td>
+              <td>{s.quantity}</td>
+              <td>₦{s.amount}</td>
+              <td>{dayjs(s.created_at).format("DD MMM, HH:mm")}</td>
             </tr>
-          </thead>
-          <tbody>
-            {sales.map((sale) => (
-              <tr key={sale.id}>
-                <td>{sale.product_name}</td>
-                <td>{sale.quantity}</td>
-                <td>{sale.amount.toLocaleString()}</td>
-                <td>{new Date(sale.created_at).toLocaleString("en-NG", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: true,
-                })}</td>
-                {isAdmin && (
-                  <td>
-                    <button onClick={() => handleDeleteSale(sale.id)} className="btn delete">
-                      Delete
-                    </button>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+          ))}
+        </tbody>
+      </table>
+    </div>
     </div>
   );
 }

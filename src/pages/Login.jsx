@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { supabase } from "../services/supabaseClient";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, Navigate } from "react-router-dom";
 import { toast } from "sonner";
 import "../styles/Auth.css";
 import { useAuthStore } from "../store/auth-store";
-import { Navigate } from "react-router-dom";
 
 export default function Login() {
   const { signin, user: authUser } = useAuthStore();
@@ -16,6 +15,7 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -34,55 +34,60 @@ export default function Login() {
       return;
     }
 
-    // await signin(user);
-
     const { data: profileData, error: profileFetchError } = await supabase
       .from("profiles")
       .select("*")
-      .eq('auth_id', user.id);
-      
+      .eq("auth_id", user.id);
 
-    
-
-    if (profileFetchError || !profileData) {
+    if (profileFetchError || !profileData?.length) {
       toast.error("Failed to load profile");
       setLoading(false);
       return;
     }
 
     signin(profileData[0]);
-
-    console.log("User from supabase", user)
-    console.log("User setup from zustand", authUser);
-    toast.success("Welcome back 👋");
+    toast.success(`Welcome back 👋`);
     navigate("/");
     setLoading(false);
   };
 
-  // if (authUser) {
-  //   <Navigate to="/" />;
-  // }
+  if (authUser) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
-    <form className="auth-form" onSubmit={handleLogin}>
-      <h2>Login</h2>
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-      <button type="submit" disabled={loading}>
-        {loading ? "Logging in..." : "Login"}
-      </button>
-    </form>
+    <div className="auth-container">
+      <form className="auth-form" onSubmit={handleLogin}>
+        <h1>Welcome to ShopStack</h1>
+        <p className="auth-subtitle">Login to your account</p>
+
+        <input
+          type="email"
+          placeholder="Enter your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <input
+          type="password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+
+        <button type="submit" disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
+        </button>
+
+        <p className="auth-toggle">
+          Don’t have an account?{" "}
+          <Link to="/signup" className="toggle">
+            Sign up here
+          </Link>
+        </p>
+      </form>
+    </div>
   );
 }

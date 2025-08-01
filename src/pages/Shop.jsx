@@ -24,9 +24,9 @@ export default function Shop() {
         <Link to={`/shops/${id}`}>Overview</Link>
         <Link to={`/shops/${id}/products`}>Products</Link>
         <Link to={`/shops/${id}/sales`}>Sales</Link>
-        <Link to={`shops/${id}/expenses`}>Expenses</Link>
+        <Link to={`/shops/${id}/expenses`}>Expenses</Link>
         <Link to="/shops/:id/settings">Settings</Link>
-        <Link to="/shops/:id/profiles">Profile</Link>
+        <Link to="/shops/:id/profile">Profile</Link>
       </div>
       <Outlet />
     </div>

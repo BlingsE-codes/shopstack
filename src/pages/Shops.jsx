@@ -5,6 +5,9 @@ import { useAuthStore } from "../store/auth-store";
 import { useShopStore } from "../store/shop-store";
 import { supabase } from "../services/supabaseClient";
 import { toast } from "sonner";
+import { ShoppingCart, Settings,TruckElectric, UserRoundPen, Store , HandHelping, ChartNoAxesCombined } from "lucide-react";
+
+
 
 export default function Shops() {
   const { user } = useAuthStore();
@@ -15,7 +18,8 @@ export default function Shops() {
   const [editAddress, setEditAddress] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
+  
+  
   useEffect(() => {
     fetchShops();
   }, []);
@@ -34,20 +38,28 @@ export default function Shops() {
     setLoading(false);
   };
 
-  const handleShopEntry = async (shopId) => {
-    const { data, error } = await supabase
-      .from("shops")
-      .select("*")
-      .eq("id", shopId)
-      .single();
-    if (error) {
-      toast.error("Failed to enter shop");
-      return;
-    }
-    setShop(data);
-    navigate(`/shops/${shopId}`);
-    
-  };
+ const handleShopEntry = async (shopId) => {
+  const { data, error } = await supabase
+    .from("shops")
+    .select("*")
+    .eq("id", shopId)
+    .single();
+
+  if (error) {
+    toast.error("Failed to enter shop");
+    return;
+  }
+
+  // ✅ Store shop_id and optional metadata
+  localStorage.setItem("shop_id", data.id);
+  localStorage.setItem("shop_name", data.name);
+  if (data.logo_url) {
+    localStorage.setItem("logo_url", data.logo_url);
+  }
+
+  setShop(data);
+  navigate(`/shops/${shopId}`);
+};
 
   const handleDelete = async (id) => {
     const confirm = window.confirm(
@@ -105,14 +117,14 @@ export default function Shops() {
     return (
       <div className="empty-shop-wrapper">
         <h2>You don't have any shops yet.</h2>
-        <button onClick={() => navigate("/create-shop")}>Create Shop</button>
+        <button onClick={() => navigate("/create-shop")} >Create Shop</button>
       </div>
     );
   }
 
   return (
     <div className="shop-wrapper">
-      <button onClick={() => navigate("/create-shop")}>Create Shop</button>
+      <button className="create-btn" onClick={() => navigate("/create-shop")}>Create Shop</button>
       <h2 className="title">Your Shops</h2>
       <div className="shop-list">
         {shops.map((shop) => (
@@ -145,13 +157,13 @@ export default function Shops() {
                 <h3>{shop.name}</h3>
                 <p className="address">{shop.address}</p>
                 <ul className="facilities">
-                  <li>🛒 Inventory Management</li>
-                  <li>📦 Stock Tracking</li>
-                  <li>📊 Sales Analytics</li>
-                  <li>👥 Staff Access</li>
-                  <li>💵 POS Support</li>
-                  <li>Settings</li>
-                  <li>Shop Profile</li>
+                  <li style={{display: "flex", alignItems: "center", columnGap: "5px"}}> <ShoppingCart stroke="blue"/>Inventory Management</li>
+                  <li style={{display: "flex", alignItems: "center", columnGap: "5px"}}> <TruckElectric stroke="tomato"/>Stock Tracking</li>
+                  <li style={{display: "flex", alignItems: "center", columnGap: "5px"}}> <ChartNoAxesCombined stroke="blue"/>Sales Analytics</li>
+                  <li style={{display: "flex", alignItems: "center", columnGap: "5px"}}> <UserRoundPen stroke="blue"/>Staff Access</li>
+                  <li style={{display: "flex", alignItems: "center", columnGap: "5px"}}> <HandHelping stroke="green"/>POS Support</li>
+                  <li style={{display: "flex", alignItems: "center", columnGap: "5px"}}> <Settings stroke="blue"/>Settings</li>
+                  <li style={{display: "flex", alignItems: "center", columnGap: "5px"}}> <Store stroke="green"/>Shop Profile</li>
                 </ul>
                 <div className="btn-group">
                   <button

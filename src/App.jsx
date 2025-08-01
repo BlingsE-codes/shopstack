@@ -148,9 +148,18 @@ export default function App() {
       >
         <Route index element={<Dashboard />} />
         <Route path="products" element={<Products />} />
+        <Route path="sales" element={<Sales />} />
+        <Route path="expenses" element={<Expenses />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="profile" element={<Profile />} />
+
+
+
+
         {/* <Route path="shops/:id/products" element={<Products />} />
         <Route path="shops/:id/products" element={<Products />} />
         <Route path="shops/:id/products" element={<Products />} /> */}
+
       </Route>
       <Route path="login" element={<Login />} />
       <Route path="signup" element={<Signup />} />

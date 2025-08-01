@@ -125,6 +125,18 @@
   gap: 8px;
   margin-top: 10px;
 }
+.create-btn {
+  padding: 10px 16px;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.create-btn:hover {
+  background-color: #3b7dc4;
+}
 
 .enter-btn,
 .edit-btn,
@@ -198,3 +210,4 @@ a{
     text-decoration: none;
     color: black !important;
 }
+

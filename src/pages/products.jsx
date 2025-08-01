@@ -4,6 +4,7 @@ import Papa from "papaparse";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
 import { useShopStore } from "../store/shop-store";
+import "../styles/products.css";
 
 export default function Products() {
   const { shop } = useShopStore();
@@ -49,20 +50,23 @@ export default function Products() {
 
   }, []);
 
-  // const fetchDailySales = async () => {
-  //   const today = new Date().toISOString().split("T")[0];
-  //   const { data, error } = await supabase
-  //     .from("sales")
-  //     .select("amount")
-  //     .eq("id", userId)
-  //     .gte("created_at", `${today}T00:00:00`)
-  //     .lte("created_at", `${today}T23:59:59`);
+   const fetchDailySales = async () => {
+    const today = new Date().toISOString().split("T")[0];
+     const { data, error } = await supabase
+       .from("sales")
+       .select("amount")
+       .eq("id", shop.id)
+       .gte("created_at", `${today}T00:00:00`)
+       .lte("created_at", `${today}T23:59:59`);
 
-  //   if (!error) {
-  //     const total = data.reduce((sum, sale) => sum + sale.amount, 0);
-  //     setTotalDailySales(total);
-  //   }
-  // };
+     if (!error) {
+       const total = data.reduce((sum, sale) => sum + sale.amount, 0);
+       setTotalDailySales(total);
+     }
+
+    
+   };
+   
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -139,7 +143,7 @@ export default function Products() {
       await supabase
         .from("products")
         .update({ quantity: qty })
-        .eq("id", userId);
+        .eq("id", shop.id);
       fetchProducts();
     }
   };

@@ -10,67 +10,57 @@ export default function Navbar({ onToggleSidebar }) {
   const [profile, setProfile] = useState(null);
   const navigate = useNavigate();
 
-  // useEffect(() => {
-  //   const fetchUserProfile = async () => {
-  //     const { data: { user } } = await supabase.auth.getUser();
-  //     setUser(user);
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user) return;
 
-  //     if (user) {
-  //       const { data, error } = await supabase
-  //         .from("profiles")
-  //         .select("*")
-  //         .eq("user_id", user.id) // ✅ fixed key
-  //         .single();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("shop_name")
+        .eq("user_id", user.id)
+        .single();
 
-  //       if (data && !error) {
-  //         setProfile(data);
-  //       }
-  //     }
-  //   };
+      if (data && !error) {
+        setProfile(data);
+      }
+    };
 
-  //   fetchUserProfile();
+    fetchUserProfile();
+  }, [user]);
 
-  //   const { data: authListener } = supabase.auth.onAuthStateChange(
-  //     async (_event, session) => {
-  //       const user = session?.user || null;
-  //       setUser(user);
-
-  //       if (user) {
-  //         const { data } = await supabase
-  //           .from("profiles")
-  //           .select("*")
-  //           .eq("user_id", user.id) // ✅ fixed key
-  //           .single();
-  //         setProfile(data);
-  //       } else {
-  //         setProfile(null);
-  //       }
-  //     }
-  //   );
-
-  //   return () => authListener.subscription.unsubscribe();
-  // }, []);
-
-  const handleLogout = async () => {
-    // await supabase.auth.signOut();
-    // setUser(null);
-    // setProfile(null);
+  const handleLogout = () => {
     logout();
-    navigate("login");
+    navigate("/login");
   };
 
   return (
     <nav className="navbar">
+
+      <Link to="/" className="navbar-brand">
+  {profile?.logo_url ? (
+    <>
+      <img src={profile.logo_url} alt="Shop Logo" className="shop-logo" />
+      <span className="shop-name">{profile.shop_name}</span>
+    </>
+  ) : (
+    <h1 className="logo">ShopStack</h1>
+  )}
+</Link>
+
+    
+
       <button className="menu-icon" onClick={onToggleSidebar}>
         <Menu size={24} />
       </button>
 
-      <Link to="/">
+      {/* <Link to="/">
         <h1 className="logo">ShopStack</h1>
-      </Link>
+      </Link> */}
 
       {profile?.shop_name && (
-        <span className="welcome-text">Welcome, {profile.shop_name}</span>
+        <div className="welcome-message">
+          👋 Welcome, <span>{profile.shop_name}</span>
+        </div>
       )}
 
       <div className="nav-buttons">
@@ -80,12 +70,12 @@ export default function Navbar({ onToggleSidebar }) {
           </Link>
         ) : (
           <>
+            <Link to="/shops" className="btn btn-shopprofile">
+              Shop Profile
+            </Link>
             <button className="btn btn-auth" onClick={handleLogout}>
               Logout
             </button>
-
-            <Link to="/shops">Shop Profile</Link>
-            {/* <Link to="/products">Products</Link> */}
           </>
         )}
       </div>

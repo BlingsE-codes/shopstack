@@ -1,52 +1,51 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../services/supabaseClient";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+// src/components/SalesChart.jsx
+import { Line } from "react-chartjs-2";
+import { Chart, registerables } from "chart.js";
+Chart.register(...registerables);
 
-export default function SalesChart() {
-  const [chartData, setChartData] = useState([]);
-
-  useEffect(() => {
-    fetchSalesData();
-  }, []);
-
-  const fetchSalesData = async () => {
-    const { data, error } = await supabase
-      .from("sales")
-      .select("created_at, amount");
-
-    if (error) {
-      console.error("Error fetching sales:", error);
-      return;
-    }
-
-    const grouped = {};
-
-    data.forEach((sale) => {
-      const date = new Date(sale.created_at).toLocaleDateString();
-      if (!grouped[date]) grouped[date] = 0;
-      grouped[date] += Number(sale.amount);
-    });
-
-    const chart = Object.entries(grouped).map(([date, amount]) => ({
-      date,
-      amount,
-    }));
-
-    setChartData(chart);
-  };
-
+export default function SalesChart({ labels, values }) {
   return (
-    <div className="sales-chart">
-      <h2>Daily Sales Report</h2>
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={chartData}>
-          <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
-          <XAxis dataKey="date" />
-          <YAxis />
-          <Tooltip formatter={(value) => `₦${value.toLocaleString()}`} />
-          <Line type="monotone" dataKey="amount" stroke="#007acc" strokeWidth={2} />
-        </LineChart>
-      </ResponsiveContainer>
+    <div className="chart-container">
+      <Line
+        data={{
+          labels,
+          datasets: [
+            {
+              label: "Sales (₦)",
+              data: values,
+              fill: true,
+              backgroundColor: "rgba(52,152,219,0.1)",
+              borderColor: "#3498db",
+              tension: 0.4,
+            },
+          ],
+        }}
+        options={{
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "top",
+              labels: {
+                color: "#333",
+                font: { size: 14, weight: "bold" },
+              },
+            },
+          },
+          scales: {
+            x: {
+              ticks: { color: "#555" },
+              grid: { display: false },
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: "#555" },
+              grid: { borderDash: [5, 5] },
+            },
+          },
+        }}
+      />
     </div>
   );
 }
+

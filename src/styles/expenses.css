@@ -1,0 +1,129 @@
+.expenses {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.expenses-title {
+  text-align: center;
+  margin-bottom: 1.2rem;
+  color: #333;
+}
+
+.expense-form,
+.filter-section {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.expense-form input,
+.filter-section input {
+  padding: 0.6rem;
+  flex: 1;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.expense-form button,
+.filter-section button {
+  padding: 0.6rem 1rem;
+  background-color: #1e88e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.total-expense {
+  margin-top: 1rem;
+  font-weight: bold;
+  color: #2e7d32;
+  text-align: right;
+}
+
+.expenses-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.expenses-table th,
+.expenses-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.expenses-table th {
+  background-color: #f4f4f4;
+}
+
+.loading {
+  text-align: center;
+  font-style: italic;
+  color: #999;
+}
+.expenses-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+
+
+
+.table-container {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.expenses-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.expenses-table th,
+.expenses-table td {
+  padding: 8px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+@media screen and (max-width: 600px) {
+  .expenses-table thead {
+    display: none;
+  }
+
+  .expenses-table,
+  .expenses-table tbody,
+  .expenses-table tr,
+  .expenses-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .expenses-table tr {
+    margin-bottom: 15px;
+    border-bottom: 2px solid #ccc;
+    padding-bottom: 10px;
+  }
+
+  .expenses-table td {
+    text-align: right;
+    position: relative;
+    padding-left: 50%;
+  }
+
+  .expenses-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 10px;
+    top: 8px;
+    font-weight: bold;
+    text-align: left;
+    white-space: nowrap;
+  }
+}
